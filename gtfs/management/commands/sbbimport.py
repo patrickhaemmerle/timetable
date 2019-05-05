@@ -8,7 +8,7 @@ from zipfile import ZipFile
 
 from django.db import transaction
 
-from gtfs.models import Agency, Stop, Route
+from gtfs.models import Agency, Stop, Route, Transfer
 
 ZIP = 'gtfs/gtfs.zip'
 EXTRACTED = 'gtfs/gtfs'
@@ -26,6 +26,7 @@ class Command(BaseCommand):
             self.import_agencies()
             self.import_stops()
             self.import_routes()
+            self.import_transfers()
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -48,9 +49,10 @@ class Command(BaseCommand):
         print('Clear old data ... ', end='')
         sys.stdout.flush()
 
+        Transfer.objects.all().delete()
+        Route.objects.all().delete()
         Stop.objects.all().delete()
         Agency.objects.all().delete()
-        Route.objects.all().delete()
         print('done')
 
     def import_agencies(self):
@@ -97,4 +99,14 @@ class Command(BaseCommand):
             csv_reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
             for row in csv_reader:
                 Route.objects.create(**row)
+        print('done')
+
+    def import_transfers(self):
+        print('Import transfers ... ', end='')
+        sys.stdout.flush()
+
+        with open(EXTRACTED + '/transfers.txt', newline='', encoding='utf-8-sig') as csvfile:
+            csv_reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+            for row in csv_reader:
+                Transfer.objects.create(**row)
         print('done')

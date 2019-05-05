@@ -15,6 +15,7 @@ WHEELCHAIR_BOARDING = (
     (2, "2"),
 )
 
+
 class Agency(models.Model):
     class Meta:
         verbose_name_plural = "Agencies"
@@ -77,3 +78,13 @@ class Route(models.Model):
 
         desc += ' (' + self.agency.agency_name + ')'
         return desc
+
+
+class Transfer(models.Model):
+    from_stop = models.ForeignKey(Stop, related_name="transfers", on_delete=models.CASCADE)
+    to_stop = models.ForeignKey(Stop, on_delete=models.CASCADE)
+    transfer_type = models.IntegerField()
+    min_transfer_time = models.IntegerField()
+
+    def __str__(self):
+        return self.from_stop.__str__() + ' -> ' + self.to_stop.__str__() + ': ' + str(self.min_transfer_time)
