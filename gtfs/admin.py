@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.datastructures import OrderedSet
 
-from gtfs.models import Agency, Stop, Route, Transfer
+from gtfs.models import Agency, Stop, Route, Transfer, Calendar, CalendarDate, Trip
 
 
 class ReadOnlyModelAdmin(admin.ModelAdmin):
@@ -13,7 +13,7 @@ class ReadOnlyModelAdmin(admin.ModelAdmin):
 
 
 class StopAdmin(ReadOnlyModelAdmin):
-    search_fields = ('stop_name',)
+    search_fields = ('stop_id', 'stop_name',)
 
 
 class RouteAdmin(ReadOnlyModelAdmin):
@@ -25,7 +25,18 @@ class TransferAdmin(ReadOnlyModelAdmin):
     search_fields = ('from_stop__stop_name', 'to_stop__stop_name')
 
 
+class TripAdmin(ReadOnlyModelAdmin):
+    list_filter = ('route__route_type',)
+    search_fields = ('trip_id', 'trip_headsign', 'route__route_short_name', 'route__route_long_name', 'route__route_desc')
+
+
+class CalendarAdmin(ReadOnlyModelAdmin):
+    search_fields = ('service_id',)
+
 admin.site.register(Agency, ReadOnlyModelAdmin)
 admin.site.register(Stop, StopAdmin)
 admin.site.register(Route, RouteAdmin)
 admin.site.register(Transfer, TransferAdmin)
+admin.site.register(Calendar, CalendarAdmin)
+admin.site.register(CalendarDate, CalendarAdmin)
+admin.site.register(Trip, TripAdmin)

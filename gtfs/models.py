@@ -88,3 +88,39 @@ class Transfer(models.Model):
 
     def __str__(self):
         return self.from_stop.__str__() + ' -> ' + self.to_stop.__str__() + ': ' + str(self.min_transfer_time)
+
+
+class Calendar(models.Model):
+    service_id = models.CharField(max_length=100, primary_key=True)
+    monday = models.IntegerField(choices=((0, "Available"), (1, "Not available")))
+    tuesday = models.IntegerField(choices=((0, "Available"), (1, "Not available")))
+    wednesday = models.IntegerField(choices=((0, "Available"), (1, "Not available")))
+    thursday = models.IntegerField(choices=((0, "Available"), (1, "Not available")))
+    friday = models.IntegerField(choices=((0, "Available"), (1, "Not available")))
+    saturday = models.IntegerField(choices=((0, "Available"), (1, "Not available")))
+    sunday = models.IntegerField(choices=((0, "Available"), (1, "Not available")))
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+
+class CalendarDate(models.Model):
+    service_id = models.CharField(max_length=100)
+    date = models.DateField()
+    exception_type = models.IntegerField(choices=((1, 'Added'), (2, 'Removed')))
+
+
+class Trip(models.Model):
+    trip_id = models.CharField(max_length=100)
+    route = models.ForeignKey(Route, on_delete=models.CASCADE)
+    service_id = models.CharField(max_length=100)
+    trip_headsign = models.CharField(max_length=100, blank=True, null=True)
+    trip_short_name = models.CharField(max_length=100, blank=True, null=True)
+    direction_id = models.IntegerField(choices=((0, "0"), (1, "1")), null=True)
+    block_id = models.CharField(max_length=100, blank=True, null=True)
+    wheelchair_accessible = models.CharField(choices=((0, "No information"), (1, "Yes"), (2, "No")), null=True,
+                                             blank=True, max_length=1)
+    bikes_allowed = models.CharField(choices=((0, "No information"), (1, "Yes"), (2, "No")), null=True, blank=True,
+                                     max_length=1)
+
+    def __str__(self):
+        return self.route.__str__()

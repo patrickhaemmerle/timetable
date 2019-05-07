@@ -1,6 +1,7 @@
 import csv
 import shutil
 import sys
+from datetime import date, time, datetime
 
 from django.core.management import BaseCommand
 from urllib.request import urlopen
@@ -8,7 +9,7 @@ from zipfile import ZipFile
 
 from django.db import transaction
 
-from gtfs.models import Agency, Stop, Route, Transfer
+from gtfs.models import Agency, Stop, Route, Transfer, Calendar, CalendarDate, Trip
 
 ZIP = 'gtfs/gtfs.zip'
 EXTRACTED = 'gtfs/gtfs'
@@ -21,12 +22,16 @@ class Command(BaseCommand):
         if not options['no_download']:
             self.download()
 
+        self.clear_data()
+
         with transaction.atomic():
-            self.clear_data()
-            self.import_agencies()
             self.import_stops()
+            self.import_agencies()
             self.import_routes()
             self.import_transfers()
+            self.import_calendar()
+            self.import_calendar_dates()
+            self.import_trips()
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -36,6 +41,8 @@ class Command(BaseCommand):
         )
 
     def download(self):
+        print('Download data ... ', end='')
+        sys.stdout.flush()
         shutil.rmtree(EXTRACTED)
         data = urlopen('https://opentransportdata.swiss/dataset/timetable-2019-gtfs/permalink')
         with open(ZIP, 'wb') as output:
@@ -44,11 +51,15 @@ class Command(BaseCommand):
         zip_ref = ZipFile(ZIP, 'r')
         zip_ref.extractall(EXTRACTED)
         zip_ref.close()
+        print('done')
 
     def clear_data(self):
         print('Clear old data ... ', end='')
         sys.stdout.flush()
 
+        Trip.objects.all().delete()
+        CalendarDate.objects.all().delete()
+        Calendar.objects.all().delete()
         Transfer.objects.all().delete()
         Route.objects.all().delete()
         Stop.objects.all().delete()
@@ -110,3 +121,58 @@ class Command(BaseCommand):
             for row in csv_reader:
                 Transfer.objects.create(**row)
         print('done')
+
+    def import_calendar(self):
+        print('Import calendar ... ', end='')
+        sys.stdout.flush()
+
+        with open(EXTRACTED + '/calendar.txt', newline='', encoding='utf-8-sig') as csvfile:
+            csv_reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+            for row in csv_reader:
+                row['start_date'] = datetime.strptime(row['start_date'], '%Y%m%d')
+                row['end_date'] = datetime.strptime(row['end_date'], '%Y%m%d')
+                Calendar.objects.create(**row)
+        print('done')
+
+    def import_calendar_dates(self):
+        print('Import calendar_dates ... ', end='')
+        sys.stdout.flush()
+
+        count = 0
+        with open(EXTRACTED + '/calendar_dates.txt', newline='', encoding='utf-8-sig') as csvfile:
+            csv_reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+            calendar_dates = list()
+            for row in csv_reader:
+                row['date'] = datetime.strptime(row['date'], '%Y%m%d')
+                calendar_dates.append(CalendarDate(**row))
+                count += 1
+                if count % 1000 == 0:
+                    print('\rImport calendar_dates ... ' + 'read ' + str(count) + ' records', end='')
+                    sys.stdout.flush()
+
+            print('\rImport calendar_dates ... ' + 'inserting ' + str(count) + ' records into db', end='')
+            sys.stdout.flush()
+            CalendarDate.objects.bulk_create(calendar_dates)
+
+        print('\rImport calendar_dates ... done                   ')
+
+    def import_trips(self):
+        print('Import trips ... ', end='')
+        sys.stdout.flush()
+
+        count = 0
+        with open(EXTRACTED + '/trips.txt', newline='', encoding='utf-8-sig') as csvfile:
+            csv_reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+            trips = list()
+            for row in csv_reader:
+                trips.append(Trip(**row))
+                count += 1
+                if count % 1000 == 0:
+                    print('\rImport trips ... ' + 'read ' + str(count) + ' records', end='')
+                    sys.stdout.flush()
+
+            print('\rImport trips ... ' + 'inserting ' + str(count) + ' records into db', end='')
+            sys.stdout.flush()
+            Trip.objects.bulk_create(trips)
+
+        print('\rImport trips ... done                   ')
