@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.datastructures import OrderedSet
 
-from gtfs.models import Agency, Stop, Route, Transfer, Calendar, CalendarDate, Trip
+from gtfs.models import Agency, Stop, Route, Transfer, Calendar, CalendarDate, Trip, StopTime
 
 
 class ReadOnlyModelAdmin(admin.ModelAdmin):
@@ -18,7 +18,7 @@ class StopAdmin(ReadOnlyModelAdmin):
 
 class RouteAdmin(ReadOnlyModelAdmin):
     list_filter = ('route_type',)
-    search_fields = ('route_short_name', 'route_long_name', 'route_desc')
+    search_fields = ('route_id', 'route_short_name', 'route_long_name', 'route_desc')
 
 
 class TransferAdmin(ReadOnlyModelAdmin):
@@ -27,11 +27,17 @@ class TransferAdmin(ReadOnlyModelAdmin):
 
 class TripAdmin(ReadOnlyModelAdmin):
     list_filter = ('route__route_type',)
-    search_fields = ('trip_id', 'trip_headsign', 'route__route_short_name', 'route__route_long_name', 'route__route_desc')
+    search_fields = (
+    'trip_id', 'trip_headsign', 'route__route_short_name', 'route__route_long_name', 'route__route_desc')
 
 
 class CalendarAdmin(ReadOnlyModelAdmin):
     search_fields = ('service_id',)
+
+
+class StopTimeModelAdmin(ReadOnlyModelAdmin):
+    search_fields = ('stop__stop_id', 'trip__trip_id')
+
 
 admin.site.register(Agency, ReadOnlyModelAdmin)
 admin.site.register(Stop, StopAdmin)
@@ -40,3 +46,4 @@ admin.site.register(Transfer, TransferAdmin)
 admin.site.register(Calendar, CalendarAdmin)
 admin.site.register(CalendarDate, CalendarAdmin)
 admin.site.register(Trip, TripAdmin)
+admin.site.register(StopTime, StopTimeModelAdmin)

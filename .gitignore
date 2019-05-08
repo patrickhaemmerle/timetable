@@ -3,3 +3,4 @@ venv/
 .idea/
 /gtfs/gtfs.zip
 /gtfs/gtfs/
+__pycache__/

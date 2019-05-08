@@ -76,7 +76,7 @@ class Route(models.Model):
         if self.route_desc:
             desc += ' / ' + self.route_desc
 
-        desc += ' (' + self.agency.agency_name + ')'
+        desc += ' (' + self.agency.agency_name + ' / ' + self.route_id + ')'
         return desc
 
 
@@ -110,7 +110,7 @@ class CalendarDate(models.Model):
 
 
 class Trip(models.Model):
-    trip_id = models.CharField(max_length=100)
+    trip_id = models.CharField(max_length=100, primary_key=True)
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
     service_id = models.CharField(max_length=100)
     trip_headsign = models.CharField(max_length=100, blank=True, null=True)
@@ -123,4 +123,27 @@ class Trip(models.Model):
                                      max_length=1)
 
     def __str__(self):
-        return self.route.__str__()
+        return self.route.__str__() + ' - ' + self.trip_short_name + ' (' + self.trip_id + ')'
+
+
+class StopTime(models.Model):
+    trip = models.ForeignKey(Trip, related_name='stop_times', on_delete=models.CASCADE)
+    stop = models.ForeignKey(Stop, related_name='stop_times', on_delete=models.CASCADE)
+    stop_sequence = models.IntegerField()
+    stop_headsign = models.CharField(max_length=100, blank=True, null=True)
+    arrival_time = models.CharField(max_length=8, blank=True, null=True)
+    departure_time = models.CharField(max_length=8, blank=True, null=True)
+    pickup_type = models.CharField(max_length=1, blank=True, null=True,
+                                   choices=(('0', 'Regularly scheduled pickup'), ('1', 'No pickup available'),
+                                            ('2', 'Must phone agency to arrange pickup'),
+                                            ('3', 'Must coordinate with driver to arrange pickup')))
+    drop_off_type = models.CharField(max_length=1, blank=True, null=True,
+                                     choices=(('0', 'Regularly scheduled drop off'), ('1', 'No dropoff available'),
+                                              ('2', 'Must phone agency to arrange dropoff'),
+                                              ('3', 'Must coordinate with driver to arrange dropoff')))
+    shape_dist_traveled = models.FloatField(null=True)
+    timepoint = models.CharField(max_length=1, blank=True, null=True, choices=(('0', '0'), ('1', '1')))
+
+    def __str__(self):
+        return self.stop.stop_name + ': ' + self.trip.trip_short_name + ' - ' + self.trip.trip_headsign + ' / ' + \
+               self.trip.__str__() + ' / ' + self.trip.route.__str__()

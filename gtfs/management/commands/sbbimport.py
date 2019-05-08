@@ -1,4 +1,5 @@
 import csv
+import os
 import shutil
 import sys
 from datetime import date, time, datetime
@@ -9,7 +10,7 @@ from zipfile import ZipFile
 
 from django.db import transaction
 
-from gtfs.models import Agency, Stop, Route, Transfer, Calendar, CalendarDate, Trip
+from gtfs.models import Agency, Stop, Route, Transfer, Calendar, CalendarDate, Trip, StopTime
 
 ZIP = 'gtfs/gtfs.zip'
 EXTRACTED = 'gtfs/gtfs'
@@ -30,8 +31,10 @@ class Command(BaseCommand):
             self.import_routes()
             self.import_transfers()
             self.import_calendar()
-            self.import_calendar_dates()
-            self.import_trips()
+
+        self.import_calendar_dates()
+        self.import_trips()
+        self.import_stop_times()
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -43,7 +46,8 @@ class Command(BaseCommand):
     def download(self):
         print('Download data ... ', end='')
         sys.stdout.flush()
-        shutil.rmtree(EXTRACTED)
+        if os.path.isdir(EXTRACTED):
+            shutil.rmtree(EXTRACTED)
         data = urlopen('https://opentransportdata.swiss/dataset/timetable-2019-gtfs/permalink')
         with open(ZIP, 'wb') as output:
             output.write(data.read())
@@ -57,6 +61,7 @@ class Command(BaseCommand):
         print('Clear old data ... ', end='')
         sys.stdout.flush()
 
+        StopTime.objects.all().delete()
         Trip.objects.all().delete()
         CalendarDate.objects.all().delete()
         Calendar.objects.all().delete()
@@ -154,7 +159,7 @@ class Command(BaseCommand):
             sys.stdout.flush()
             CalendarDate.objects.bulk_create(calendar_dates)
 
-        print('\rImport calendar_dates ... done                   ')
+        print('\rImport calendar_dates ... done                                       ')
 
     def import_trips(self):
         print('Import trips ... ', end='')
@@ -175,4 +180,27 @@ class Command(BaseCommand):
             sys.stdout.flush()
             Trip.objects.bulk_create(trips)
 
-        print('\rImport trips ... done                   ')
+        print('\rImport trips ... done                                       ')
+
+    def import_stop_times(self):
+        print('Import stop_times ... ', end='')
+        sys.stdout.flush()
+
+        count = 0
+        with open(EXTRACTED + '/stop_times.txt', newline='', encoding='utf-8-sig') as csvfile:
+            csv_reader = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+            stop_times = list()
+            for row in csv_reader:
+                stop_times.append(StopTime(**row))
+                count += 1
+                if count % 1000 == 0:
+                    print('\rImport stop_times ... ' + str(count) + ' records', end='')
+                    sys.stdout.flush()
+                if count % 100000 == 0:
+                    StopTime.objects.bulk_create(stop_times)
+                    stop_times.clear()
+
+            sys.stdout.flush()
+            StopTime.objects.bulk_create(stop_times)
+
+        print('\rImport stop_times ... done                                       ')
